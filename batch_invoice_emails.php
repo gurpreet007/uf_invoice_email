@@ -201,6 +201,13 @@
     foreach($cust_info as $k=>$v) {
       $group = $k;
       $batchnum = $v["newid"];
+
+      if(! count($v["emails"] > 0)) {
+        $dbh = dbOpen();
+        doLog($dbh, $logId, __FUNCTION__, "No email found for invgrp $k");
+        dbClose($dbh);
+        continue;
+      }
       $email = implode("; ", $v["emails"]);
 
       #adding my email for testing
