@@ -11,13 +11,6 @@
     ibase_close($dbh);
   }
 
-  function dbSelect($sql) {
-    $dbh = dbOpen();
-    $result = ibase_query($dbh, $sql) or die(ibase_errmsg());
-    dbClose($dbh);
-    return $result;
-  }
-
   function doLegacyLog() {
     $dbh = dbOpen();
     $sql = "insert into ITEMALTERATIONHISTORY 
@@ -39,10 +32,9 @@
     next value for UF_INVOICE_EMAIL_LOG, '%s', '%s', '%s', current_timestamp)",
     $batchLogId, $action, $info);
 
+    #[https://bugs.php.net/bug.php?id=72175]
     #$dbh = dbOpen();
-
     ibase_query($dbh, $sql) or die(ibase_errmsg());
-
     #dbClose($dbh);
   }
 
@@ -96,11 +88,8 @@
     while($row = ibase_fetch_object($result)) {
       $invGroups[] = $row->INVGRP;
     }
-    #[https://bugs.php.net/bug.php?id=72175]
     ibase_free_result($result);
-
     doLog($dbh, $logId, __FUNCTION__, "Count: ".count($invGroups));
-
     return $invGroups;
   }
 
@@ -213,6 +202,7 @@
       $group = $k;
       $batchnum = $v["newid"];
       $email = implode("; ", $v["emails"]);
+
       #adding my email for testing
       $email .= "; gurpreet.singh@unifresh.com.au";
 
@@ -244,11 +234,13 @@
     foreach($cust_info as $k=>$v) {
       $cust_names = implode(", ", $v["custs"]);
       $emails = implode(", ", $v["emails"]);
+
       $link = "<a 
         href='http://www.unifresh.com.au/batchemaildownload.php?
         qt=BF&grp={$k}&ib={$v['newid']}'>
           {$v['newid']}
         </a>";
+
       $output .= rawurlencode("
         <tr>
           <td width='500'>
@@ -262,6 +254,7 @@
           </td>
         </tr>
       \n");
+
     }
     #we are about to wander into uncharted territory (again)...
     #so good idea to make a log entry beforehand
