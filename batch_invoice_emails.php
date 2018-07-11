@@ -114,7 +114,8 @@
               else 
                 CUSTOMERMASTER.ADDITIONALFIELD_47 
               END = '%s'
-              and additionalfield_54 is not null";
+              and additionalfield_54 is not null
+              and customerstatus = 'Active' ";
 
     $cust_info = [];
     $dbh = dbOpen();
