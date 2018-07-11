@@ -43,14 +43,27 @@
                           'content' => $postdata]];
 
     $ctx = stream_context_create($params);
+
+    $dbh = dbOpen();
+    #info field is max 2000 chars, so logging only maximum 1990 to be safe
+    doLog($dbh, $logId, __FUNCTION__, $url);
+    doLog($dbh, $logId, __FUNCTION__, substr($postdata, 0, 1990));
+
     $fp = @fopen($url, 'rb', false, $ctx);
-    if (!$fp)
+    if (!$fp) {
+      doLog($dbh, $logId, __FUNCTION__, $php_errormsg);
+      dbClose($dbh);
       throw new Exception("Problem with $url, $php_errormsg");
+    }
 
     $response = @stream_get_contents($fp);
-    if ($response === false)
+    if ($response === false) {
+      doLog($dbh, $logId, __FUNCTION__, $php_errormsg);
+      dbClose($dbh);
       throw new Exception("Problem reading data from ${url}, $php_errormsg");
-
+    }
+    doLog($dbh, $logId, __FUNCTION__, "Success");
+    dbClose($dbh);
     return $response;
   }
 
@@ -201,13 +214,6 @@
     foreach($cust_info as $k=>$v) {
       $group = $k;
       $batchnum = $v["newid"];
-
-      if(! count($v["emails"] > 0)) {
-        $dbh = dbOpen();
-        doLog($dbh, $logId, __FUNCTION__, "No email found for invgrp $k");
-        dbClose($dbh);
-        continue;
-      }
       $email = implode("; ", $v["emails"]);
 
       #adding my email for testing
@@ -225,10 +231,14 @@
         "about to send email to invgrp $k ($email)");
       dbClose($dbh);
 
-      $xmlstr = do_post_request(
-        'http://mail.unifresh.com.au:3333/Email_batchinvoices.php', 
-        $postDat, $logId);
-      
+      #go and send email
+      #but make sure we have atleast one email address to send mail to
+      if(count($v["emails"]) >= 1) {
+        $xmlstr = do_post_request(
+          'http://mail.unifresh.com.au:3333/Email_batchinvoices.php', 
+          $postDat, $logId);
+      }
+
       #good we came back unharmed
       #time to celebrate by updating invoiceemailbatch
       if($xmlstr == "<p>Message successfully sent!</p>")
@@ -297,10 +307,10 @@
    
     #send invoice emails
     #and update batch number if email is sent successfully
-    sendWeeksBatchEmail($cust_info, $logId);
+    #sendWeeksBatchEmail($cust_info, $logId);
 
     #send confirmation email back to us
-    sendConfirmationEmail($cust_info, $logId);
+    #sendConfirmationEmail($cust_info, $logId);
   }
 
   start();
